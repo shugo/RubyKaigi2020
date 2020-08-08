@@ -8,6 +8,15 @@ Shugo Maeda
 
 # Self introduction
 
+* Shugo Maeda
+* Ruby committer since the last century
+* Director at Network Applied Communication Laboratory Ltd.
+* Secretary General at Ruby Association
+
+## From Matsue Shimane Japan
+
+![Tottori](tottori.jpg)
+
 # What are refinements?
 
 > Magic is organizing chaos. And while oceans of mystery remain,
@@ -37,15 +46,10 @@ p 1 / 2 #=> (1/2)
 foo     #=> 0
 ```
 
-## SKYACTIV-X
-
-![SKYACTIV-X](skyactiv-x.jpg)
-
 ## More power for Refinements
 
-* Block-level activation
-
 ```ruby
+# Block-level activation
 foo {
   p 1 / 2 #=> (1/2)
 }
@@ -108,8 +112,6 @@ p 1 / 2 #=> 0
 
 ## Thread safety
 
-* Same block calls with different refinements break method cache
-
 ```ruby
 f = Proc.new {
   ...
@@ -117,6 +119,7 @@ f = Proc.new {
 2.times do |i|
   Thread.start do
     1000.times do
+      # Same block calls with different refinements break method cache
       instance_eval(using: MODULES[i], &f)
     end
   end
@@ -141,11 +144,7 @@ end
 
 ```ruby
 module IntegerDivExt
-  refine Integer do
-    def /(other)
-      quo(other)
-    end
-  end
+  refine Integer do; def /(other); quo(other); end; end
 end
 
 def instance_eval_with_integer_div_ext(obj, &block)
@@ -154,9 +153,7 @@ def instance_eval_with_integer_div_ext(obj, &block)
   obj.instance_eval(&block)
 end
 
-# Necessary where blocks are written
-using Proc::Refinements
-
+using Proc::Refinements # Necessary where blocks are written
 p 1 / 2 #=> 0
 instance_eval_with_integer_div_ext(1) do
   p self / 2 #=> (1/2)
@@ -164,28 +161,35 @@ end
 p 1 / 2 #=> 0
 ```
 
-## Thread safety
+## Not Proc-level, but block-level
 
-* Same block calls with different refinements are prohibited
-* Once a block is called, new refinements cannot be added by Proc#using
+```
+
+
+      { p 1 / 2 }
+     +-----------+    proc1.using(IntegerDivExt)   +------+
+     |   Block   |<--------------------------------| Proc |
+     +-----------+                                 +------+
+           ^
+           |
+           |         proc2.call #=> (1/2)          +------+
+           +---------------------------------------| Proc |
+                                                   +------+
+
+```
+
+## Thread safety
 
 ```ruby
 m1 = Module.new {
-  refine String do
-    def foo
-      "m1:foo"
-    end
-  end
+  refine String do; def foo; "m1:foo"; end; end
 }
 m2 = Module.new {
-  refine String do
-    def foo
-      "m2:foo"
-    end
-  end
+  refine String do; def foo; "m2:foo"; end; end
 }
 using Proc::Refinements
 [m1, m2].each do |m|
+  # Once a block is called, new refinements cannot be added by Proc#using
   Proc.new {
     [m, "x".foo, Module.used_modules]
   }.using(m).call # error with m2
@@ -194,8 +198,14 @@ end
 
 ## instance_exec support
 
-* Proc#using is independent from instance_eval and can be used with
-  instance_exec
+```ruby
+# Proc#using is independent from instance_eval and can be used with
+# instance_exec
+def foo(&block)
+  block.using(M)
+  @obj.instance_exec(@params, &block)
+end
+```
 
 ## Explicit activation
 
@@ -210,12 +220,7 @@ end
 * For CRuby: https://github.com/shugo/ruby/pull/2
 * For JRuby: https://github.com/shugo/jruby/pull/1
 
-## 残課題
+## Summary
 
-* ブロックが一度でも実行されたら新しいモジュールをProc#usingで追加できないようにしたい
-* CRubyで違うクラスに対して同一ブロックでclass_evalした時にバグがあるのを修正したい
-* MVM/Ractorでの挙動がどうあるべきか
-
-## まとめ
-
-* DSLを書きやすくするために先行事例の課題を解決するProc#usingを提案した
+* Proc#using brings more power for Refinements
+* Issues of previous study are resolved
