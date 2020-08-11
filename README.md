@@ -6,10 +6,11 @@ Network Applied Communication Laboratory
 
 Shugo Maeda
 
-# Self introduction
+## Self introduction
 
 * Shugo Maeda
 * Ruby committer since the last century
+* Creator of Textbringer
 * Director at Network Applied Communication Laboratory Ltd.
 * Secretary General at Ruby Association
 
@@ -17,13 +18,17 @@ Shugo Maeda
 
 ![Tottori](tottori.jpg)
 
-# What are refinements?
+## What are Refinements?
 
 > Magic is organizing chaos. And while oceans of mystery remain,
 > we have deduced that this requires two things. Balance and control.
 > Without them, chaos will kill you.
 
 * The Witcher Season 1 Episode 2
+
+## What is chaos?
+
+* Monkey patching
 
 ## Example
 
@@ -45,6 +50,10 @@ using IntegerDivExt
 p 1 / 2 #=> (1/2)
 foo     #=> 0
 ```
+
+## Balance
+
+* Current specifiction of Refinements is too conservative
 
 ## More power for Refinements
 
@@ -133,7 +142,7 @@ end
 
 ## Implicit activation
 
-* Refinements are activated implicitly
+* Refinements are activated implicitly without `using`
 
 ## New proposal
 
@@ -148,8 +157,7 @@ module IntegerDivExt
 end
 
 def instance_eval_with_integer_div_ext(obj, &block)
-  # using IntegerDivExt in the block (not Proc) represented by `block`
-  block.using(IntegerDivExt)
+  block.using(IntegerDivExt) # using IntegerDivExt in `block`!
   obj.instance_eval(&block)
 end
 
@@ -167,14 +175,14 @@ p 1 / 2 #=> 0
 
 
           { p 1 / 2 }
-         +-----------+    proc1.using(IntegerDivExt)   +-------+
-         |   block   |<--------------------------------| proc1 |
-         +-----------+                                 +-------+
+         +-----------+    proc1.using(IntegerDivExt)   +---------+
+         |   block   |<--------------------------------|  proc1  |
+         +-----------+                                 +---------+
                ^
                |
-               |         proc2.call #=> (1/2)          +-------+
-               +---------------------------------------| proc2 |
-                                                       +-------+
+               |         proc2.call #=> (1/2)          +---------+
+               +---------------------------------------|  proc2  |
+                                                       +---------+
 
 ```
 
